@@ -1,8 +1,9 @@
 const THERMAL_PRINTER_SERVICE_UUID = "4a40d898-cb8a-49fa-9471-c16aaef23b56";
 const COMMAND_CHARACTERISTIC = "2064E034-2E6A-40E1-9682-20742CAA9987";
 
-const PAPER_WIDTH = 128;
-const PAPER_HEIGHT = 100;
+const PAPER_WIDTH = 384;
+const PAPER_HEIGHT = 500;
+const BUFFER_HEIGHT = 100;
 
 const CMD_RESET       = 0x00;
 const CMD_TEST        = 0x01;
@@ -89,6 +90,7 @@ async function findDevice() {
         if (!deviceUUIDSet.has(device.id)) {
             deviceUUIDSet.add(device.id);
             addDeviceToList(device);
+            connectDevice(device);
         } else {
             // TODO: Maybe this is unofficial hack > device.rssi
             document.querySelector(`#${device.id} .rssi`).innerText = device.rssi;
@@ -312,14 +314,14 @@ async function renderProfileToCanvas(device) {
         await renderProfileImage(device, canvas, profile.pictureUrl, imageWidth);
     }
 
-    const offsetX = imageWidth + 5;
-    const maxWidth = PAPER_WIDTH - offsetX - 5;
+    const offsetY = imageWidth + 100;
     ctx.strokeStyle = 'black';
     ctx.fillStyle = 'black';
-    ctx.font = "bold 30px Verdana";
-    ctx.fillText(profile.displayName, offsetX, 50, maxWidth);
+    ctx.textAlign = "center";
+    ctx.font = "bold 40px Verdana";
+    ctx.fillText(profile.displayName, PAPER_WIDTH / 2, offsetY, PAPER_WIDTH);
     ctx.font = "bold 20px Verdana";
-    ctx.fillText(profile.statusMessage || "", offsetX, 95, maxWidth);
+    ctx.fillText(profile.statusMessage || "", PAPER_WIDTH / 2, offsetY + 50, PAPER_WIDTH);
 
     // threshold for text
     const image = ctx.getImageData(imageWidth, 0, PAPER_WIDTH - imageWidth, PAPER_HEIGHT);
@@ -333,7 +335,7 @@ function renderProfileImage(device, canvas, dataUrl, width) {
         image.crossOrigin = "Anonymous";
         image.onload = () => {
             onScreenLog(`Image loaded: ${image.width}x${image.height}`);
-            drawImage(canvas, image, 0, (PAPER_HEIGHT - width) / 2, width, width);
+            drawImage(canvas, image, (PAPER_WIDTH - width) / 2, 0, width, width);
             resolve();
         };
         image.src = dataUrl;
@@ -411,37 +413,42 @@ async function refreshImageDisplay(device, canvas, progressBarClass) {
     await writeCharacteristic(commandCharacteristic, [CMD_WAKE]);
     await writeCharacteristic(commandCharacteristic, [CMD_SET_DEFAULT]);
 
-    const commands = [...Array(PAPER_HEIGHT).keys()]
-        .map(y => [...Array(Math.floor(PAPER_WIDTH / 8)).keys()]
+    const imageData = ctx.getImageData(0, 0, PAPER_WIDTH, PAPER_HEIGHT).data
+        .map((p, i, arr) => (p > 0 || arr[i+3] == 0) ? 0 : 1)
+        .filter((p, i) => i % 4 == 0);
+
+    for (const y in [...Array(PAPER_HEIGHT).keys()]) {
+        const intY = parseInt(y, 10);
+        const row = [...Array(Math.floor(PAPER_WIDTH / 8)).keys()]
             .map(x => x * 8)
-            .map(x => ctx.getImageData(x, y, 8, 1).data
-                .map((p, i, arr) => (p > 0 || arr[i+3] == 0) ? 0 : 1)
-                .filter((p, i) => i % 4 == 0)
-                .reduce((acc, cur, i) => acc | cur << i, 0)
-            )
+            .map(x => imageData
+                .slice(y * PAPER_WIDTH + x, y * PAPER_WIDTH + x + 8)
+                .reduce((acc, cur) => (acc << 1) | cur, 0))
             .reduce((acc, bitmap, i) => {
+                const bufY = intY % BUFFER_HEIGHT;
                 if (i % 16 == 0) {
-                    acc.push([CMD_BITMAP_WRITE, y & 0xff, y >> 8, i / 16, bitmap]);
+                    acc.push([CMD_BITMAP_WRITE, bufY & 0xff, bufY >> 8, i / 16, bitmap]);
                 } else {
                     acc[acc.length - 1].push(bitmap);
                 }
                 return acc;
-            }, [])
-        );
-
-    for (const y in commands) {
-        const row = commands[y];
-        const intY = parseInt(y, 10);
+            }, []);
 
         await Promise.all(row.map((command) => {
-            onScreenLog(`${y}: ${command.map(c => c.toString(16)).join(' ')}`);
+            //onScreenLog(`${y}: ${command.map(c => c.toString(16)).join(' ')}`);
             return writeCharacteristic(commandCharacteristic, command);
         }));
 
-        updateDeviceProgress(device, progressBarClass, Math.floor((intY + 1) / commands.length * 100));
+        if (y % BUFFER_HEIGHT == BUFFER_HEIGHT - 1) {
+            await writeCharacteristic(
+                commandCharacteristic,
+                [CMD_BITMAP_FLUSH, BUFFER_HEIGHT & 0xff, BUFFER_HEIGHT >> 8]);
+        }
+
+        updateDeviceProgress(device, progressBarClass, Math.floor((intY + 1) / PAPER_HEIGHT * 100));
     }
 
-    await writeCharacteristic(commandCharacteristic, [CMD_BITMAP_FLUSH, PAPER_HEIGHT & 0xff, PAPER_HEIGHT >> 8]);
+    //await writeCharacteristic(commandCharacteristic, [CMD_BITMAP_FLUSH, PAPER_HEIGHT & 0xff, PAPER_HEIGHT >> 8]);
     await writeCharacteristic(commandCharacteristic, [CMD_FEED, 1]);
     await writeCharacteristic(commandCharacteristic, [CMD_SLEEP]);
 }

@@ -1,11 +1,6 @@
 #include <bluefruit.h>
 #include <Adafruit_Thermal.h>
-#include <SoftwareSerial.h>
-#include <Adafruit_LittleFS.h>
-#include <InternalFileSystem.h>
-#include "adalogo.h"
-
-using namespace Adafruit_LittleFS_Namespace;
+//#include <SoftwareSerial.h>
 
 // Device Name: Maximum 30 bytes
 #define DEVICE_NAME "LINE Things Thermal Printer"
@@ -13,6 +8,7 @@ using namespace Adafruit_LittleFS_Namespace;
 // User service UUID: Change this to your generated service UUID
 #define THERMAL_PRINTER_SERVICE_UUID "4a40d898-cb8a-49fa-9471-c16aaef23b56"
 #define COMMAND_CHARACTERISTIC_UUID "2064E034-2E6A-40E1-9682-20742CAA9987"
+#define FLOW_CONTROL_CHARACTERISTIC_UUID "F2F31CFB-322C-47C5-B7F9-997394B9568C"
 
 // PSDI Service UUID: Fixed value for Developer Trial
 #define PSDI_SERVICE_UUID "E625601E-9E55-4597-A598-76018A0D293D"
@@ -22,10 +18,9 @@ using namespace Adafruit_LittleFS_Namespace;
 #define RX_PIN 3
 #define TX_PIN 4
 
-#define PAPER_WIDTH 128
+#define PAPER_WIDTH 384
 #define ROW_BYTES (PAPER_WIDTH / 8)
 
-#define BUFFER_FILENAME "/buffer.txt"
 #define BUFFER_MAX_HEIGHT 100
 
 #define CMD_QUEUE_SIZE 512
@@ -45,11 +40,14 @@ using namespace Adafruit_LittleFS_Namespace;
 // Accepted values are: -40, -30, -20, -16, -12, -8, -4, 0, 4
 #define BLE_TX_POWER 0
 
-SoftwareSerial mySerial(RX_PIN, TX_PIN);
-Adafruit_Thermal printer(&mySerial, DTR_PIN);
+//SoftwareSerial mySerial(RX_PIN, TX_PIN);
+//Adafruit_Thermal printer(&mySerial, DTR_PIN);
+//Adafruit_Thermal printer(&mySerial);
+Adafruit_Thermal printer(&Serial, DTR_PIN);
 
 BLEService thermalPrinterService;
 BLECharacteristic commandCharacteristic;
+BLECharacteristic flowControlCharacteristic;
 BLEService psdiService;
 BLECharacteristic psdiCharacteristic;
 
@@ -59,24 +57,20 @@ typedef struct _command {
 } Command;
 Command cmd_queue[CMD_QUEUE_SIZE];
 volatile uint16_t cmd_start = 0, cmd_end = 0;
-volatile bool cmd_full;
+volatile bool cmd_full = false, cmd_warn = false;
 
-File bitmap_buffer(InternalFS);
+//File bitmap_buffer(InternalFS);
 uint8_t buffer_row[BUFFER_MAX_HEIGHT * ROW_BYTES];
 
 void setup() {
-  Serial.begin(115200);
-  InternalFS.begin();
-  bitmap_buffer.open(BUFFER_FILENAME, FILE_O_WRITE);
-  bitmap_buffer.seek(PAPER_WIDTH / 8 * BUFFER_MAX_HEIGHT);
-  bitmap_buffer.write(0xff);
-  bitmap_buffer.seek(0);
+  //Serial.begin(115200);
 
   // NOTE: SOME PRINTERS NEED 9600 BAUD instead of 19200, check test page.
-  mySerial.begin(9600);
-  printer.begin(60);
+  //mySerial.begin(9600);
+  Serial.begin(115200);
+  printer.begin();
   delay(1500);
-  Serial.println(F("Printer ready."));
+  //Serial.println(F("Printer ready."));
 
   printer.write(27); // ESC
   printer.write(57); // '9'
@@ -92,7 +86,7 @@ void setup() {
 
   setupServices();
   startAdvertising();
-  Serial.println(F("Bluetooth LE ready."));
+  //Serial.println(F("Bluetooth LE ready."));
 }
 
 void loop() {
@@ -102,16 +96,16 @@ void loop() {
 void commandWriteCallback(uint16_t conn_handle, BLECharacteristic* chr, uint8_t* data, uint16_t len) {
   Command *cmd;
 
-  Serial.print(F("Receive command Q="));
-  Serial.print(cmd_end);
+  //Serial.print(F("Receive command Q="));
+  //Serial.print(cmd_end);
   for (uint8_t i = 0; i < len; i++) {
-    Serial.print(" ");
-    Serial.print(data[i], HEX);
+    //Serial.print(" ");
+    //Serial.print(data[i], HEX);
   }
-  Serial.println("");
+  //Serial.println("");
 
   if (cmd_full) {
-    Serial.println(F("Command queue FULL"));
+    //Serial.println(F("Command queue FULL"));
     return;
   }
  
@@ -123,18 +117,12 @@ void commandWriteCallback(uint16_t conn_handle, BLECharacteristic* chr, uint8_t*
   if (cmd_end == cmd_start) {
     cmd_full = true;
     cmd_end--;
-    Serial.println(F("Command queue FULL"));
+    //Serial.println(F("Command queue FULL"));
     return;
   }
 
   cmd->length = len;
   memcpy(cmd->data, data, len);
-
-/*
-  if (cmd_full) {
-    command_process_one();
-  }
-  */
 }
 
 void command_process() {
@@ -146,14 +134,14 @@ void command_process() {
 void command_process_one() {
   Command *cmd = &cmd_queue[cmd_start];
 
-  Serial.print(F("Process command Q="));
-  Serial.print(cmd_start);
-  Serial.print("-");
-  Serial.print(cmd_end);
-  Serial.print(" len(");
-  Serial.print(cmd->length, DEC);
-  Serial.print(") ");
-  Serial.println(cmd->data[0], HEX);
+  //Serial.print(F("Process command Q="));
+  //Serial.print(cmd_start);
+  //Serial.print("-");
+  //Serial.print(cmd_end);
+  //Serial.print(" len(");
+  //Serial.print(cmd->length, DEC);
+  //Serial.print(") ");
+  //Serial.println(cmd->data[0], HEX);
 
   switch (cmd->data[0]) {
     case CMD_RESET:
@@ -163,18 +151,16 @@ void command_process_one() {
       printer.test();
       break;
     case CMD_TESTPAGE:
-      //printer.testPage();
+      printer.testPage();
       break;
     case CMD_SET_DEFAULT:
-      //printer.setDefault();
+      printer.setDefault();
       break;
     case CMD_WAKE:
-      //printer.wake();
+      printer.wake();
       break;
     case CMD_SLEEP:
-
-  printer.printBitmap(adalogo_width, adalogo_height, adalogo_data);
-      //printer.sleep();
+      printer.sleep();
       break;
     case CMD_FEED:
       if (cmd->length >= 2) {
@@ -183,26 +169,22 @@ void command_process_one() {
       break;
     case CMD_BITMAP_WRITE: {
       if (cmd->length < 5) {
-        Serial.println(F("Invalid CMD_BITMAP_WRITE length."));
+        //Serial.println(F("Invalid CMD_BITMAP_WRITE length."));
         break;
       }
 
       unsigned int y = ((unsigned int) cmd->data[2] << 8) | cmd->data[1];
       unsigned int x = cmd->data[3];
 
-      Serial.print(F("CMD_BITMAP_WRITE y: "));
-      Serial.print(y, DEC);
-      Serial.print(" x: ");
-      Serial.println(x, DEC);
+      //Serial.print(F("CMD_BITMAP_WRITE y: "));
+      //Serial.print(y, DEC);
+      //Serial.print(" x: ");
+      //Serial.println(x, DEC);
       if (y >= BUFFER_MAX_HEIGHT) {
-        Serial.print(F("Buffer overflow"));
+        //Serial.print(F("Buffer overflow"));
         break;
       }
 
-/*
-      bitmap_buffer.seek(y * (PAPER_WIDTH / 8) + x * 16);
-      bitmap_buffer.write(cmd->data + 4, cmd->length - 4);
-      */
       for (uint8_t i = 4; i < cmd->length; i++) {
         buffer_row[y * ROW_BYTES + x * 16 + (i - 4)] = cmd->data[i];
       }
@@ -210,49 +192,32 @@ void command_process_one() {
     }
     case CMD_BITMAP_FLUSH: {
       if (cmd->length < 3) {
-        Serial.println(F("Invalid CMD_BITMAP_FLUSH length."));
+        //Serial.println(F("Invalid CMD_BITMAP_FLUSH length."));
         break;
       }
 
       unsigned int height = ((unsigned int) cmd->data[2] << 8) | cmd->data[1];
-      Serial.print(F("CMD_BITMAP_FLUSH height: "));
-      Serial.println(height, DEC);
+      //Serial.print(F("CMD_BITMAP_FLUSH height: "));
+      //Serial.println(height, DEC);
       if (height > BUFFER_MAX_HEIGHT) {
-        Serial.println(F("Invalid paper height"));
+        //Serial.println(F("Invalid paper height"));
         break;
       }
 
-/*
-      bitmap_buffer.close();
-      bitmap_buffer.open(BUFFER_FILENAME, FILE_O_READ);
-      if (bitmap_buffer) {
-        for (unsigned int y = 0; y < height; y++) {
-          Serial.print(y);
-          Serial.print(": ");
-          for (unsigned int x = 0; x < PAPER_WIDTH / 8; x++) {
-            Serial.print(bitmap_buffer.read(), HEX);
-            Serial.print(" ");
-          }
-          Serial.println("");
-        }
-        bitmap_buffer.seek(0);
-        printer.printBitmap(300, 0, &bitmap_buffer);
-      }
-      bitmap_buffer.close();
-      bitmap_buffer.open(BUFFER_FILENAME, FILE_O_WRITE);
-*/
-
       for (unsigned int y = 0; y < height; y++) {
-        Serial.print(y);
-        Serial.print(": ");
+        //Serial.print(y);
+        //Serial.print(": ");
         for (unsigned int x = 0; x < PAPER_WIDTH / 8; x++) {
-          Serial.print(buffer_row[y * ROW_BYTES + x], HEX);
-          Serial.print(" ");
+          //Serial.print(buffer_row[y * ROW_BYTES + x], HEX);
+          //Serial.print(" ");
         }
-        Serial.println("");
+        //Serial.println("");
       }
 
+      // Print bitmap from buffer
       printer.printBitmap(PAPER_WIDTH, height, buffer_row, false);
+      // Clear frame buffer
+      memset(buffer_row, 0, sizeof(buffer_row));
       break;
     }
     case CMD_TEXT_PRINT:
@@ -260,7 +225,7 @@ void command_process_one() {
       printer.println((char *) (cmd->data + 1));
       break;
     default:
-      Serial.println(F("Unknown command"));
+      //Serial.println(F("Unknown command"));
       break;
   }
 
@@ -275,12 +240,14 @@ void command_process_one() {
 void setupServices(void) {
   uint8_t thermalPrinterServiceUUID[16];
   uint8_t commandCharacteristicUUID[16];
+  uint8_t flowControlCharacteristicUUID[16];
   uint8_t psdiServiceUUID[16];
   uint8_t psdiCharacteristicUUID[16];
 
   // Convert String UUID to raw UUID bytes
   strUUID2Bytes(F(THERMAL_PRINTER_SERVICE_UUID), thermalPrinterServiceUUID);
   strUUID2Bytes(F(COMMAND_CHARACTERISTIC_UUID), commandCharacteristicUUID);
+  strUUID2Bytes(F(FLOW_CONTROL_CHARACTERISTIC_UUID), flowControlCharacteristicUUID);
   strUUID2Bytes(F(PSDI_SERVICE_UUID), psdiServiceUUID);
   strUUID2Bytes(F(PSDI_CHARACTERISTIC_UUID), psdiCharacteristicUUID);
 
@@ -289,10 +256,16 @@ void setupServices(void) {
   thermalPrinterService.begin();
 
   commandCharacteristic = BLECharacteristic(commandCharacteristicUUID);
-  commandCharacteristic.setProperties(CHR_PROPS_WRITE);
+  commandCharacteristic.setProperties(CHR_PROPS_WRITE_WO_RESP);
   commandCharacteristic.setPermission(SECMODE_ENC_NO_MITM, SECMODE_ENC_NO_MITM);
   commandCharacteristic.setWriteCallback(commandWriteCallback);
   commandCharacteristic.begin();
+
+  flowControlCharacteristic = BLECharacteristic(flowControlCharacteristicUUID);
+  flowControlCharacteristic.setProperties(CHR_PROPS_NOTIFY);
+  flowControlCharacteristic.setPermission(SECMODE_ENC_NO_MITM, SECMODE_ENC_NO_MITM);
+  flowControlCharacteristic.setFixedLen(1);
+  flowControlCharacteristic.begin();
 
   // Setup PSDI Service
   psdiService = BLEService(psdiServiceUUID);
@@ -324,15 +297,15 @@ void event_ble_connect(uint16_t conn_handle) {
   BLEConnection* connection = Bluefruit.Connection(conn_handle);
   connection->getPeerName(central_name, sizeof(central_name));
 
-  Serial.print(F("Connected "));
-  Serial.println(central_name);
+  //Serial.print(F("Connected "));
+  //Serial.println(central_name);
 }
 
 void event_ble_disconnect(uint16_t conn_handle, uint8_t reason) {
   (void)conn_handle;
   (void)reason;
-  Serial.print(F("Disconnected Reason: "));
-  Serial.println(reason, HEX);
+  //Serial.print(F("Disconnected Reason: "));
+  //Serial.println(reason, HEX);
 }
 
 // UUID Converter
