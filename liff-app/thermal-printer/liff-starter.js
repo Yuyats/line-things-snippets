@@ -1,5 +1,6 @@
 const THERMAL_PRINTER_SERVICE_UUID = "4a40d898-cb8a-49fa-9471-c16aaef23b56";
 const COMMAND_CHARACTERISTIC = "2064E034-2E6A-40E1-9682-20742CAA9987";
+const FLOW_CONTROL_CHARACTERISTIC_UUID = "F2F31CFB-322C-47C5-B7F9-997394B9568C"
 
 const PAPER_WIDTH = 384;
 const PAPER_HEIGHT = 500;
@@ -20,6 +21,7 @@ const CMD_TEXT_PRINTLN  = 0x21;
 const deviceUUIDSet = new Set();
 const connectedUUIDSet = new Set();
 const connectingUUIDSet = new Set();
+const flowControlDeviceIdSet = new Set();
 
 let logNumber = 1;
 
@@ -140,9 +142,10 @@ function connectDevice(device) {
         device.addEventListener('gattserverdisconnected', disconnectCallback);
 
         onScreenLog('Connecting ' + device.name);
-        device.gatt.connect().then(() => {
+        device.gatt.connect().then(async () => {
             updateConnectionStatus(device, 'connected');
             connectingUUIDSet.delete(device.id);
+            await toggleNotification(device, true);
         }).catch(e => {
             flashSDKError(e);
             onScreenLog(`ERROR on gatt.connect(${device.id}): ${e}`);
@@ -162,8 +165,9 @@ function initializeCardForDevice(device) {
     template.querySelector('.card > .card-header > .device-name').innerText = device.name;
 
     // Device disconnect button
-    template.querySelector('.device-disconnect').addEventListener('click', () => {
+    template.querySelector('.device-disconnect').addEventListener('click', async () => {
         onScreenLog('Clicked disconnect button');
+        await toggleNotification(device, false);
         device.gatt.disconnect();
     });
 
@@ -250,6 +254,7 @@ function updateConnectionStatus(device, status) {
         statusBtn.innerText = "Connected";
         getDeviceDisconnectButton(device).style.display = 'inline-block';
         getDeviceCardBody(device).style.display = 'block';
+        document.getElementById(device.id).classList.add('active');
     } else if (status == 'disconnected') {
         onScreenLog('Disconnected from ' + device.name);
         connectedUUIDSet.delete(device.id);
@@ -270,6 +275,49 @@ function updateConnectionStatus(device, status) {
         getDeviceDisconnectButton(device).style.display = 'none';
         getDeviceCardBody(device).style.display = 'none';
         document.getElementById(device.id).classList.remove('active');
+    }
+}
+
+async function toggleNotification(device, state) {
+    if (!connectedUUIDSet.has(device.id)) {
+        window.alert('Please connect to a device first');
+        onScreenLog('Please connect to a device first.');
+        return;
+    }
+
+    const characteristic = await getCharacteristic(
+        device, THERMAL_PRINTER_SERVICE_UUID, FLOW_CONTROL_CHARACTERISTIC_UUID);
+
+    if (!state) {
+        // Stop notification
+        await stopNotification(characteristic, notificationCallback);
+    } else {
+        // Start notification
+        await enableNotification(characteristic, notificationCallback);
+    }
+}
+
+async function enableNotification(characteristic, callback) {
+    const device = characteristic.service.device;
+    characteristic.addEventListener('characteristicvaluechanged', callback);
+    await characteristic.startNotifications();
+    onScreenLog('Notifications STARTED ' + characteristic.uuid + ' ' + device.id);
+}
+
+async function stopNotification(characteristic, callback) {
+    const device = characteristic.service.device;
+    characteristic.removeEventListener('characteristicvaluechanged', callback);
+    await characteristic.stopNotifications();
+    onScreenLog('Notifications STOPPED　' + characteristic.uuid + ' ' + device.id);
+}
+
+function notificationCallback(e) {
+    onScreenLog(`Notify ${e.target.uuid}: ${buf2hex(e.target.value)}`);
+    const queueFull = e.target.value.getInt8();
+    if (queueFull > 0) {
+        flowControlDeviceIdSet.add(e.target.service.device.id);
+    } else {
+        flowControlDeviceIdSet.delete(e.target.service.device.id);
     }
 }
 
@@ -434,6 +482,10 @@ async function refreshImageDisplay(device, canvas, progressBarClass) {
                 return acc;
             }, []);
 
+        while (flowControlDeviceIdSet.has(device,id)) {
+            await sleep(500);
+        }
+
         await Promise.all(row.map((command) => {
             //onScreenLog(`${y}: ${command.map(c => c.toString(16)).join(' ')}`);
             return writeCharacteristic(commandCharacteristic, command);
@@ -448,8 +500,7 @@ async function refreshImageDisplay(device, canvas, progressBarClass) {
         updateDeviceProgress(device, progressBarClass, Math.floor((intY + 1) / PAPER_HEIGHT * 100));
     }
 
-    //await writeCharacteristic(commandCharacteristic, [CMD_BITMAP_FLUSH, PAPER_HEIGHT & 0xff, PAPER_HEIGHT >> 8]);
-    await writeCharacteristic(commandCharacteristic, [CMD_FEED, 1]);
+    await writeCharacteristic(commandCharacteristic, [CMD_FEED, 2]);
     await writeCharacteristic(commandCharacteristic, [CMD_SLEEP]);
 }
 
@@ -487,7 +538,7 @@ async function refreshTextDisplay(device) {
             .concat([0]));
     }));
 
-    await writeCharacteristic(commandCharacteristic, [CMD_FEED, 1]);
+    await writeCharacteristic(commandCharacteristic, [CMD_FEED, 2]);
     await writeCharacteristic(commandCharacteristic, [CMD_SLEEP]);
 }
 

@@ -20,10 +20,11 @@
 
 #define PAPER_WIDTH 384
 #define ROW_BYTES (PAPER_WIDTH / 8)
-
 #define BUFFER_MAX_HEIGHT 100
 
 #define CMD_QUEUE_SIZE 512
+#define CMD_QUEUE_WARN (CMD_QUEUE_SIZE - 200)
+
 #define CMD_RESET       0x00
 #define CMD_TEST        0x01
 #define CMD_TESTPAGE    0x02
@@ -123,6 +124,11 @@ void commandWriteCallback(uint16_t conn_handle, BLECharacteristic* chr, uint8_t*
 
   cmd->length = len;
   memcpy(cmd->data, data, len);
+
+  if (cmd_queue_used() > CMD_QUEUE_WARN) {
+    cmd_warn = true;
+    flowControlCharacteristic.notify8(1);
+  }
 }
 
 void command_process() {
@@ -235,6 +241,16 @@ void command_process_one() {
   if (cmd_full) {
     cmd_full = false;
   }
+  if (cmd_warn && cmd_queue_used() < CMD_QUEUE_WARN) {
+    cmd_warn = false;
+    flowControlCharacteristic.notify8(0);
+  }
+}
+
+uint32_t cmd_queue_used() {
+  return cmd_start < cmd_end
+    ? cmd_end - cmd_start
+    : (cmd_end + CMD_QUEUE_SIZE) - cmd_start);
 }
 
 void setupServices(void) {
