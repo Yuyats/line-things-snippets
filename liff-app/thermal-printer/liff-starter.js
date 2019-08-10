@@ -1,6 +1,8 @@
 const THERMAL_PRINTER_SERVICE_UUID = "4a40d898-cb8a-49fa-9471-c16aaef23b56";
 const COMMAND_CHARACTERISTIC = "2064E034-2E6A-40E1-9682-20742CAA9987";
-const FLOW_CONTROL_CHARACTERISTIC_UUID = "F2F31CFB-322C-47C5-B7F9-997394B9568C"
+const FLOW_CONTROL_CHARACTERISTIC_UUID = "F2F31CFB-322C-47C5-B7F9-997394B9568C";
+const PSDI_SERVICE_UUID = "E625601E-9E55-4597-A598-76018A0D293D";
+const PSDI_CHARACTERISTIC_UUID = "26E2B12B-85F0-4F3F-9FDD-91D114270E6E";
 
 const PAPER_WIDTH = 384;
 const PAPER_HEIGHT = 500;
@@ -312,7 +314,7 @@ async function stopNotification(characteristic, callback) {
 }
 
 function notificationCallback(e) {
-    onScreenLog(`Notify ${e.target.uuid}: ${buf2hex(e.target.value)}`);
+    onScreenLog(`Notify ${e.target.uuid}: ${e.target.value.getInt8()}`);
     const queueFull = e.target.value.getInt8();
     if (queueFull > 0) {
         flowControlDeviceIdSet.add(e.target.service.device.id);
@@ -359,35 +361,26 @@ async function renderProfileToCanvas(device) {
     }
 
     if (imageWidth > 0 && profile.pictureUrl) {
-        await renderProfileImage(device, canvas, profile.pictureUrl, imageWidth);
+        await drawImageFromURL(
+            canvas, profile.pictureUrl,
+            (PAPER_WIDTH - imageWidth) / 2, 0, imageWidth, imageWidth);
     }
 
-    const offsetY = imageWidth + 100;
+    await drawImageFromURL(canvas, "./LINE_APP.png", (PAPER_WIDTH - 100) / 2, imageWidth + 175, 100, 100, 1);
+
+    const offsetY = imageWidth + 75;
     ctx.strokeStyle = 'black';
     ctx.fillStyle = 'black';
     ctx.textAlign = "center";
     ctx.font = "bold 40px Verdana";
     ctx.fillText(profile.displayName, PAPER_WIDTH / 2, offsetY, PAPER_WIDTH);
-    ctx.font = "bold 20px Verdana";
+    ctx.font = "bold 30px Verdana";
     ctx.fillText(profile.statusMessage || "", PAPER_WIDTH / 2, offsetY + 50, PAPER_WIDTH);
 
     // threshold for text
-    const image = ctx.getImageData(imageWidth, 0, PAPER_WIDTH - imageWidth, PAPER_HEIGHT);
+    const image = ctx.getImageData(0, 0, PAPER_WIDTH, PAPER_HEIGHT);
     const dithered = CanvasDither.threshold(image, 190);
-    ctx.putImageData(dithered, imageWidth, 0);
-}
-
-function renderProfileImage(device, canvas, dataUrl, width) {
-    return new Promise((resolve, reject) => {
-        const image = new Image();
-        image.crossOrigin = "Anonymous";
-        image.onload = () => {
-            onScreenLog(`Image loaded: ${image.width}x${image.height}`);
-            drawImage(canvas, image, (PAPER_WIDTH - width) / 2, 0, width, width);
-            resolve();
-        };
-        image.src = dataUrl;
-    });
+    ctx.putImageData(dithered, 0, 0);
 }
 
 function renderImageToCanvas(device, dataUrl) {
@@ -426,7 +419,20 @@ function renderImageToCanvas(device, dataUrl) {
     image.src = dataUrl;
 }
 
-function drawImage(canvas, image, x, y, width, height) {
+function drawImageFromURL(canvas, dataUrl, x, y, width, height, mode=0) {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.crossOrigin = "Anonymous";
+        image.onload = () => {
+            onScreenLog(`Image loaded: ${image.width}x${image.height}`);
+            drawImage(canvas, image, x, y, width, height, mode);
+            resolve();
+        };
+        image.src = dataUrl;
+    });
+}
+
+function drawImage(canvas, image, x, y, width, height, mode=0) {
     if (!canvas.getContext) {
         onScreenLog("Canvas is not supported on this device.");
         return;
@@ -437,7 +443,12 @@ function drawImage(canvas, image, x, y, width, height) {
 
     // apply dither
     const source = ctx.getImageData(x, y, width, height);
-    const dithered = CanvasDither.atkinson(source);
+    let dithered;
+    if (mode == 1) {
+        dithered = CanvasDither.threshold(source, 200);
+    } else {
+        dithered = CanvasDither.atkinson(source);
+    }
     ctx.putImageData(dithered, x, y);
 
     onScreenLog(`Rendered image: ${width}x${height} on ${x}:${y}`);
@@ -457,6 +468,8 @@ async function refreshImageDisplay(device, canvas, progressBarClass) {
     const ctx = canvas.getContext('2d');
     const commandCharacteristic = await getCharacteristic(
         device, THERMAL_PRINTER_SERVICE_UUID, COMMAND_CHARACTERISTIC);
+    const dummyCharacteristic = await getCharacteristic(
+        device, PSDI_SERVICE_UUID, PSDI_CHARACTERISTIC_UUID);
 
     await writeCharacteristic(commandCharacteristic, [CMD_WAKE]);
     await writeCharacteristic(commandCharacteristic, [CMD_SET_DEFAULT]);
@@ -482,7 +495,8 @@ async function refreshImageDisplay(device, canvas, progressBarClass) {
                 return acc;
             }, []);
 
-        while (flowControlDeviceIdSet.has(device,id)) {
+        while (flowControlDeviceIdSet.has(device.id)) {
+            //onScreenLog(`Queue full on device: ${device.id}`);
             await sleep(500);
         }
 
@@ -495,6 +509,11 @@ async function refreshImageDisplay(device, canvas, progressBarClass) {
             await writeCharacteristic(
                 commandCharacteristic,
                 [CMD_BITMAP_FLUSH, BUFFER_HEIGHT & 0xff, BUFFER_HEIGHT >> 8]);
+        }
+
+        if (y % 20 == 0) {
+            // dummy read
+            await dummyCharacteristic.readValue();
         }
 
         updateDeviceProgress(device, progressBarClass, Math.floor((intY + 1) / PAPER_HEIGHT * 100));

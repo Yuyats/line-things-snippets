@@ -58,8 +58,8 @@
           <div class="tab-content row my-2">
             <div class="tab-pane fade col show active" id="nav-line" role="tabpanel" aria-labelledby="nav-line-tab">
               <div class="d-flex flex-row no-gutters justify-content-center my-2">
-                <div class="bg-secondary border" style="width: 384px; height: 500px; overflow: hidden;">
-                  <canvas class="profile-preview m-0 p-0 border-0 rounded-0"></canvas>
+                <div class="bg-secondary border">
+                  <canvas class="profile-preview m-0 p-0 border-0 rounded-0" style="width:100%"></canvas>
                 </div>
               </div>
               <div class="form-profile-command row no-gutters">
@@ -69,9 +69,9 @@
                       <label class="input-group-text">Image Size</label>
                     </div>
                     <select class="value-profile-image-size custom-select input-group-prepend">
-                      <option value="F">Full</option>
+                      <option value="F" selected>Full</option>
                       <option value="L">Large</option>
-                      <option value="M" selected>Medium</option>
+                      <option value="M">Medium</option>
                       <option value="S">Small</option>
                       <option value="X">None</option>
                     </select>
@@ -140,12 +140,12 @@
             </div>
             <div class="tab-pane fade col" id="nav-image" role="tabpanel" aria-labelledby="nav-image-tab">
               <div class="d-flex flex-row no-gutters justify-content-center my-2">
-                <div class="bg-secondary border" style="width: 384px; height: 500px; overflow: hidden;">
-                  <canvas class="image-thumbnail m-0 p-0 border-0 rounded-0"></canvas>
+                <div class="bg-secondary border">
+                  <canvas class="image-thumbnail m-0 p-0 border-0 rounded-0" style="width:100%"></canvas>
                 </div>
               </div>
               <div class="row no-gutters">
-                <input type="file" class="image-input form-control-file" accept="image/*" capture>
+                <input type="file" class="image-input form-control-file" accept="image/*">
               </div>
               <div class="row">
                 <div class="col mt-3 mx-3">
@@ -195,7 +195,7 @@
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/js/bootstrap.min.js" integrity="sha384-o+RDsa0aLu++PJvFqy8fFScvbHFLtbvScb8AjopnFD+iEQ7wo/CG0xlczd+2O/em" crossorigin="anonymous"></script>
   <script src="https://d.line-scdn.net/liff/1.0/sdk.js"></script>
   <script src="CanvasDither/dist/canvas-dither.js"></script>
-  <script src="liff-starter.js?id=20190402_1554191889"></script>
+  <script src="liff-starter.js?id=20190402_1554191880"></script>
 </body>
 
 </html>
