@@ -295,9 +295,9 @@ function getDeviceDirectionInput(device) {
 }
 
 function getDeviceSpeedInput(device) {
-//     return getDeviceCard(device).getElementsByClassName('range-speed')[0];
-    onScreenLog('device speed');
-    return 5
+    let c = getDeviceCard(device).getElementsByClassName('range-speed')[0];
+    onScreenLog('c', c, c.value);
+    return c
 }
 
 function getDeviceStandbyButton(device) {
