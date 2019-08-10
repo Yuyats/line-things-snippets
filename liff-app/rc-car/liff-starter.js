@@ -298,6 +298,7 @@ function getDeviceSpeedInput(device) {
     let c = getDeviceCard(device).getElementsByClassName('range-speed')[0];
     onScreenLog('c');
     onScreenLog(c);
+    onScreenLog('c.value ');
     onScreenLog(c.value); 
     return c
 }
