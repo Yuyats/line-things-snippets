@@ -300,6 +300,7 @@ function getDeviceSpeedInput(device) {
     onScreenLog(c);
     onScreenLog('c.value ');
     onScreenLog(c.value); 
+    c.value = 3;
     return c
 }
 
