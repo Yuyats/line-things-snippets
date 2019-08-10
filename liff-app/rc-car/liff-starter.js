@@ -227,7 +227,7 @@ function updateConnectionStatus(device, status) {
 async function updateCarState(device, brake) {
     const rangeDirection = getDeviceDirectionInput(device);
     const rangeSpeed = getDeviceSpeedInput(device);
-    rangeSpeed = 3;
+    rangeSpeed.value = 3;
 
     onScreenLog(`${rangeDirection.value} ${rangeSpeed.value} ${brake}`);
     onScreenLog('============');
