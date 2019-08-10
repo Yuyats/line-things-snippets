@@ -231,6 +231,7 @@ async function updateCarState(device, brake) {
 
     onScreenLog(`${rangeDirection.value} ${rangeSpeed.value} ${brake}`);
     onScreenLog('============');
+    onScreenLog('------------');
 
     const characteristic = await getCharacteristic(
         device, RCCAR_SERVICE_UUID, RCCAR_CHARACTERISTIC_UUID);
