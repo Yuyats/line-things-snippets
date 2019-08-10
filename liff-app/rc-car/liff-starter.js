@@ -296,7 +296,9 @@ function getDeviceDirectionInput(device) {
 
 function getDeviceSpeedInput(device) {
     let c = getDeviceCard(device).getElementsByClassName('range-speed')[0];
-    onScreenLog('c', c, c.value);
+    onScreenLog('c');
+    onScreenLog(c);
+    onScreenLog(c.value); 
     return c
 }
 
