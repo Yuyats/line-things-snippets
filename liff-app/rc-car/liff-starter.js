@@ -235,7 +235,7 @@ async function updateCarState(device, brake) {
     const characteristic = await getCharacteristic(
         device, RCCAR_SERVICE_UUID, RCCAR_CHARACTERISTIC_UUID);
 //     await writeCharacteristic(characteristic, [rangeSpeed.value, rangeDirection.value, brake]);
-    await writeCharacteristic(characteristic, [3, rangeDirection.value, brake]);
+    await writeCharacteristic(characteristic, [rangeSpeed, rangeDirection.value, brake]);
 }
 
 async function readCharacteristic(characteristic) {
@@ -295,6 +295,7 @@ function getDeviceDirectionInput(device) {
 
 function getDeviceSpeedInput(device) {
     return getDeviceCard(device).getElementsByClassName('range-speed')[0];
+    return 5
 }
 
 function getDeviceStandbyButton(device) {
