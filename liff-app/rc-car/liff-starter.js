@@ -248,7 +248,7 @@ async function updateCarState(device, brake) {
     }
     await writeCharacteristic(characteristic, [0, rangeDirection.value, 1]);
     isMovingForward = !isMovingForward;
-    onScreenLog(`${rangeDirection.value} ${rangeSpeed.value} ${brake} %{isMovingForward}`);
+    onScreenLog(`${rangeDirection.value} ${rangeSpeed.value} ${brake} ${isMovingForward}`);
 }
 
 async function readCharacteristic(characteristic) {
