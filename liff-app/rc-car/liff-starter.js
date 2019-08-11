@@ -234,16 +234,16 @@ async function updateCarState(device, brake) {
 //     rangeSpeed.value = 3;
 
     onScreenLog(`${rangeDirection.value} ${rangeSpeed.value} ${brake}`);
-    onScreenLog('============12345');
+    onScreenLog('============123450');
 
     const characteristic = await getCharacteristic(
         device, RCCAR_SERVICE_UUID, RCCAR_CHARACTERISTIC_UUID);
 //     await writeCharacteristic(characteristic, [rangeSpeed.value, rangeDirection.value, brake]);
 
     if (isMovingForward) {
-        rangeSpeed.value = -30
+        rangeSpeed.value = -50
     } else {
-        rangeSpeed.value = 30
+        rangeSpeed.value = 50
     }
     for (i=0; i<30; i++) {
         await writeCharacteristic(characteristic, [rangeSpeed.value, rangeDirection.value, brake]);        
