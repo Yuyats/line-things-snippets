@@ -238,7 +238,9 @@ async function updateCarState(device, brake) {
     const characteristic = await getCharacteristic(
         device, RCCAR_SERVICE_UUID, RCCAR_CHARACTERISTIC_UUID);
 //     await writeCharacteristic(characteristic, [rangeSpeed.value, rangeDirection.value, brake]);
-    await writeCharacteristic(characteristic, [rangeSpeed.value, rangeDirection.value, brake]);
+
+    await writeCharacteristic(characteristic, [15, rangeDirection.value, brake]);
+    isMovingForward = !isMovingForward;
 }
 
 async function readCharacteristic(characteristic) {
@@ -293,18 +295,18 @@ function getDeviceDisconnectButton(device) {
 }
 
 function getDeviceDirectionInput(device) {
-    return getDeviceCard(device).getElementsByClassName('range-direction')[0];
+    
+    let direction = getDeviceCard(device).getElementsByClassName('range-direction')[0];
+
+    if (!isMovingForward) {
+    }
+    return direction
 }
 
 function getDeviceSpeedInput(device) {
     let c = getDeviceCard(device).getElementsByClassName('range-speed')[0];
-    onScreenLog('c');
+    onScreenLog('cc');
     onScreenLog(c);
-    c.value = 20;    
-    if (!isMovingForward) {
-        c.value = -c.value;
-    }
-    isMovingForward = !isMovingForward;
     onScreenLog('c.value ');
     onScreenLog(c.value); 
 
