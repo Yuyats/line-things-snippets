@@ -22,7 +22,7 @@ function onScreenLog(text) {
 }
 
 window.onload = () => {
-    onScreenLog('onloadd');
+    onScreenLog('onloaded');
 
     liff.init(async () => {
         onScreenLog('LIFF initializedd');
@@ -235,7 +235,6 @@ async function updateCarState(device, brake) {
 
     onScreenLog(`${rangeDirection.value} ${rangeSpeed.value} ${brake}`);
     onScreenLog('============');
-    onScreenLog('------------');
 
     const characteristic = await getCharacteristic(
         device, RCCAR_SERVICE_UUID, RCCAR_CHARACTERISTIC_UUID);
