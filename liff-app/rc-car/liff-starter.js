@@ -241,7 +241,7 @@ async function updateCarState(device, brake) {
 //     await writeCharacteristic(characteristic, [rangeSpeed.value, rangeDirection.value, brake]);
 
     if (isMovingForward) {
-        rangeSpeed = -30
+        rangeSpeed.value = -30
     }
     for (i=0; i<30; i++) {
         await writeCharacteristic(characteristic, [rangeSpeed, rangeDirection.value, brake]);        
