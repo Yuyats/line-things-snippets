@@ -234,21 +234,21 @@ async function updateCarState(device, brake) {
 //     rangeSpeed.value = 3;
 
     onScreenLog(`${rangeDirection.value} ${rangeSpeed.value} ${brake}`);
-    onScreenLog('============');
+    onScreenLog('============1');
 
     const characteristic = await getCharacteristic(
         device, RCCAR_SERVICE_UUID, RCCAR_CHARACTERISTIC_UUID);
 //     await writeCharacteristic(characteristic, [rangeSpeed.value, rangeDirection.value, brake]);
 
     if (isMovingForward) {
-//         rangeDirection = 
+        rangeDirection.value = -1; 
     }
     for (i=0; i<30; i++) {
-        await writeCharacteristic(characteristic, [15, rangeDirection.value, brake]);        
+        await writeCharacteristic(characteristic, [30, rangeDirection.value, brake]);        
     }
     await writeCharacteristic(characteristic, [0, rangeDirection.value, 1]);
     isMovingForward = !isMovingForward;
-    onScreenLog(`${rangeDirection.value} ${rangeSpeed.value} ${brake} %{isMovingForard}`);
+    onScreenLog(`${rangeDirection.value} ${rangeSpeed.value} ${brake} %{isMovingFoward}`);
 }
 
 async function readCharacteristic(characteristic) {
@@ -313,9 +313,7 @@ function getDeviceDirectionInput(device) {
 
 function getDeviceSpeedInput(device) {
     let c = getDeviceCard(device).getElementsByClassName('range-speed')[0];
-    onScreenLog('cc');
-    onScreenLog(c);
-    onScreenLog('c.value ');
+    onScreenLog('c.value 1');
     onScreenLog(c.value); 
 
     return c
