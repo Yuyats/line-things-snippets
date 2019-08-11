@@ -241,14 +241,14 @@ async function updateCarState(device, brake) {
 //     await writeCharacteristic(characteristic, [rangeSpeed.value, rangeDirection.value, brake]);
 
     if (isMovingForward) {
-        rangeDirection.value = -1; 
+        rangeDirection.value = 1; 
     }
     for (i=0; i<30; i++) {
         await writeCharacteristic(characteristic, [30, rangeDirection.value, brake]);        
     }
     await writeCharacteristic(characteristic, [0, rangeDirection.value, 1]);
     isMovingForward = !isMovingForward;
-    onScreenLog(`${rangeDirection.value} ${rangeSpeed.value} ${brake} %{isMovingFoward}`);
+    onScreenLog(`${rangeDirection.value} ${rangeSpeed.value} ${brake} %{isMovingForward}`);
 }
 
 async function readCharacteristic(characteristic) {
