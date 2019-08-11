@@ -22,6 +22,8 @@ function onScreenLog(text) {
 }
 
 window.onload = () => {
+    onScreenLog('onload');
+
     liff.init(async () => {
         onScreenLog('LIFF initializedd');
         renderVersionField();
