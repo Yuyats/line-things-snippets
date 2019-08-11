@@ -22,7 +22,7 @@ function onScreenLog(text) {
 }
 
 window.onload = () => {
-    onScreenLog('onload');
+    onScreenLog('onloadd');
 
     liff.init(async () => {
         onScreenLog('LIFF initializedd');
@@ -242,6 +242,7 @@ async function updateCarState(device, brake) {
 //     await writeCharacteristic(characteristic, [rangeSpeed.value, rangeDirection.value, brake]);
 
     await writeCharacteristic(characteristic, [15, rangeDirection.value, brake]);
+    await writeCharacteristic(characteristic, [0, rangeDirection.value, 1]);
     isMovingForward = !isMovingForward;
 }
 
