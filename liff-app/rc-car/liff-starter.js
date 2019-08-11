@@ -22,10 +22,10 @@ function onScreenLog(text) {
 }
 
 window.onload = () => {
-    onScreenLog('onloaded');
+    onScreenLog('onloaded1');
 
     liff.init(async () => {
-        onScreenLog('LIFF initializedd');
+        onScreenLog('LIFF initializedsd');
         renderVersionField();
 
         await liff.initPlugins(['bluetooth']);
@@ -229,7 +229,7 @@ function updateConnectionStatus(device, status) {
 }
 
 async function updateCarState(device, brake) {
-    const rangeDirection = getDeviceDirectionInput(device);
+    let rangeDirection = getDeviceDirectionInput(device);
     const rangeSpeed = getDeviceSpeedInput(device);
 //     rangeSpeed.value = 3;
 
@@ -240,9 +240,15 @@ async function updateCarState(device, brake) {
         device, RCCAR_SERVICE_UUID, RCCAR_CHARACTERISTIC_UUID);
 //     await writeCharacteristic(characteristic, [rangeSpeed.value, rangeDirection.value, brake]);
 
-    await writeCharacteristic(characteristic, [15, rangeDirection.value, brake]);
+    if (isMovingForward) {
+//         rangeDirection = 
+    }
+    for (i=0; i<30; i++) {
+        await writeCharacteristic(characteristic, [15, rangeDirection.value, brake]);        
+    }
     await writeCharacteristic(characteristic, [0, rangeDirection.value, 1]);
     isMovingForward = !isMovingForward;
+    onScreenLog(`${rangeDirection.value} ${rangeSpeed.value} ${brake} %{isMovingForard}`);
 }
 
 async function readCharacteristic(characteristic) {
