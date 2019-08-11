@@ -230,21 +230,21 @@ function updateConnectionStatus(device, status) {
 
 async function updateCarState(device, brake) {
     let rangeDirection = getDeviceDirectionInput(device);
-    const rangeSpeed = getDeviceSpeedInput(device);
+    let rangeSpeed = getDeviceSpeedInput(device);
 //     rangeSpeed.value = 3;
 
     onScreenLog(`${rangeDirection.value} ${rangeSpeed.value} ${brake}`);
-    onScreenLog('============1');
+    onScreenLog('============12');
 
     const characteristic = await getCharacteristic(
         device, RCCAR_SERVICE_UUID, RCCAR_CHARACTERISTIC_UUID);
 //     await writeCharacteristic(characteristic, [rangeSpeed.value, rangeDirection.value, brake]);
 
     if (isMovingForward) {
-        rangeDirection.value = 1; 
+        rangeSpeed = -30
     }
     for (i=0; i<30; i++) {
-        await writeCharacteristic(characteristic, [30, rangeDirection.value, brake]);        
+        await writeCharacteristic(characteristic, [rangeSpeed, rangeDirection.value, brake]);        
     }
     await writeCharacteristic(characteristic, [0, rangeDirection.value, 1]);
     isMovingForward = !isMovingForward;
