@@ -10,6 +10,8 @@ const connectingUUIDSet = new Set();
 
 let logNumber = 1;
 
+var isMovingForward = true;
+
 function onScreenLog(text) {
     const logbox = document.getElementById('logbox');
     logbox.value += '#' + logNumber + '> ';
@@ -159,12 +161,12 @@ function initializeCardForDevice(device) {
         };
     })();
 
-    template.querySelector('.range-direction').addEventListener('change', () => {
-        updateCarState(device, 0).catch(e => onScreenLog(`ERROR on updateCarState(): ${e}\n${e.stack}`));
-    });
-    template.querySelector('.range-speed').addEventListener('change', () => {
-        updateCarState(device, 0).catch(e => onScreenLog(`ERROR on updateCarState(): ${e}\n${e.stack}`));
-    });
+//     template.querySelector('.range-direction').addEventListener('change', () => {
+//         updateCarState(device, 0).catch(e => onScreenLog(`ERROR on updateCarState(): ${e}\n${e.stack}`));
+//     });
+//     template.querySelector('.range-speed').addEventListener('change', () => {
+//         updateCarState(device, 0).catch(e => onScreenLog(`ERROR on updateCarState(): ${e}\n${e.stack}`));
+//     });
     template.querySelector('.range-direction').addEventListener('input', throttledUpdateCarState);
     template.querySelector('.range-speed').addEventListener('input', throttledUpdateCarState);
     template.querySelector('.button-standby').addEventListener('click', () => {
@@ -177,7 +179,7 @@ function initializeCardForDevice(device) {
         getDeviceDirectionInput(device).value = 0;
         getDeviceSpeedInput(device).value = 0;
 //         getDeviceSpeedInput(device).value = -3;
-        updateCarState(device, 1).catch(e => onScreenLog(`ERROR on updateCarState(): ${e}\n${e.stack}`));
+        updateCarState(device, 0).catch(e => onScreenLog(`ERROR on updateCarState(): ${e}\n${e.stack}`));
     });
 
     // Remove existing same id card
@@ -298,7 +300,11 @@ function getDeviceSpeedInput(device) {
     let c = getDeviceCard(device).getElementsByClassName('range-speed')[0];
     onScreenLog('c');
     onScreenLog(c);
-    c.value = 15;    
+    c.value = 20;    
+    if (!isMovingForward) {
+        c.value = -c.value;
+    }
+    isMovingForward = !isMovingForward;
     onScreenLog('c.value ');
     onScreenLog(c.value); 
 
