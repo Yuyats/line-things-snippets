@@ -23,7 +23,7 @@ function onScreenLog(text) {
 
 window.onload = () => {
     liff.init(async () => {
-        onScreenLog('LIFF initialized');
+        onScreenLog('LIFF initializedd');
         renderVersionField();
 
         await liff.initPlugins(['bluetooth']);
